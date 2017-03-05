@@ -31,7 +31,9 @@ namespace SiteAdminUtils.ViewModel
         {
             ServiceLocator.SetLocatorProvider(() => SimpleIoc.Default);
 
-            SimpleIoc.Default.Register<MainViewModel>();
+            SimpleIoc.Default.Register<MainViewModel>(() => new MainViewModel(this));
+            SimpleIoc.Default.Register<TestUserAgentStringsVM>();
+            SimpleIoc.Default.Register<AnalyzeAccessLogVM>();
         }
 
         public MainViewModel Main
@@ -41,10 +43,25 @@ namespace SiteAdminUtils.ViewModel
                 return ServiceLocator.Current.GetInstance<MainViewModel>();
             }
         }
-        
+
+        public TestUserAgentStringsVM TestUserAgentStringsViewModel
+        {
+            get
+            {
+                return ServiceLocator.Current.GetInstance<TestUserAgentStringsVM>();
+            }
+        }
+
+        public AnalyzeAccessLogVM AnalyzeAccessLogViewModel
+        {
+            get
+            {
+                return ServiceLocator.Current.GetInstance<AnalyzeAccessLogVM>();
+            }
+        }
+
         public static void Cleanup()
         {
-            // TODO Clear the ViewModels
         }
     }
 }

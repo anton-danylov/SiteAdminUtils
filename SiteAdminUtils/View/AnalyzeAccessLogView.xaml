@@ -1,0 +1,69 @@
+﻿<UserControl x:Class="SiteAdminUtils.View.AnalyzeAccessLogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:SiteAdminUtils.View"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="25px" />
+            <RowDefinition />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <Button Command="{Binding DownloadLogsCommand}" Grid.Row="0" Grid.Column="0" Content="Download Logs" />
+        <Button Command="{Binding ProcessSelectedLogsCommand}" Grid.Row="0" Grid.Column="1" Content="Process Logs" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Grid.Row="0" Grid.Column="2">
+            <TextBlock Text="Items processed: " />
+            <TextBlock Text="{Binding ProcessedLinesCount}" />
+            <TextBlock Text=" | " />
+            <TextBlock Text="{Binding LogTimeStart}" />
+            <TextBlock Text=" - " />
+            <TextBlock Text="{Binding LogTimeEnd}" />
+        </StackPanel>
+
+        <!-- ListView with processing results-->
+        <DataGrid Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding ProcessedLogEntries}">
+
+        </DataGrid>
+
+        <!-- Listbox with logs-->
+        <Grid Grid.Row="1" Grid.Column="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Select All" Grid.Column="0" />
+            <CheckBox IsChecked="{Binding IsSelectedAllLogs}" Margin="3" Grid.Column="1" />
+            <ListBox ItemsSource="{Binding DownloadedLogItems}" Margin="3" Grid.Row="1" Grid.ColumnSpan="2" HorizontalContentAlignment="Stretch">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="{Binding Name}" Grid.Column="0" />
+                            <CheckBox IsChecked="{Binding IsSelected}" Grid.Column="1"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        
+    </Grid>
+</UserControl>

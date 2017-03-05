@@ -4,54 +4,37 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SiteAdminUtils"
+        xmlns:conv="clr-namespace:SiteAdminUtils.Converters"
+        xmlns:view="clr-namespace:SiteAdminUtils.View"
+        xmlns:vm="clr-namespace:SiteAdminUtils.ViewModel"
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="825"
         WindowState="Maximized"
-        DataContext="{Binding Source={StaticResource Locator}, Path=Main}">
+        DataContext="{Binding Source={StaticResource Locator}, Path=Main}"
+        >
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:AnalyzeAccessLogVM}">
+            <view:AnalyzeAccessLogView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:TestUserAgentStringsVM}">
+            <view:TestUserAgentStringsView />
+        </DataTemplate>
+    </Window.Resources>
+    
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition />
+            <ColumnDefinition Width="130"/>
+            <ColumnDefinition Width="5"/>
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="30"/>
-            <RowDefinition Height="30"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="30"/>
-        </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Grid.ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition />
-            </Grid.ColumnDefinitions>
-            <Label Content="Site URL:"/>
-            <TextBox Text="{Binding SiteUrl}" Grid.Column="1"/>
-        </Grid>
-        <ProgressBar Value="{Binding CurrentProgress}" Grid.Row="1" Grid.ColumnSpan="2" />
-        <TextBlock Text="{Binding CurrentUserAgent}" Grid.Row="1" Grid.ColumnSpan="2"  Background="Transparent" Foreground="Black" HorizontalAlignment="Center" VerticalAlignment="Center" />
-
-        <Grid Grid.Row="2" Grid.ColumnSpan="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition />
-                <ColumnDefinition Width="5"/>
-                <ColumnDefinition />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="30"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="All User Agents" />
-            <TextBlock Grid.Row="0" Grid.Column="2" Text="Forbidden Agents" />
-
-            <TextBox  Text="{Binding AllUserAgents}"  Grid.Row="1" Grid.Column="0" AcceptsReturn="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Visible"/>
-            <GridSplitter Grid.Column="1" Grid.RowSpan="2" HorizontalAlignment="Stretch" />
-            <TextBox Text="{Binding ForbiddenUserAgents}" Grid.Row="1" Grid.Column="2" AcceptsReturn="True" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Visible"/>
-
-        </Grid>
-
-        <Button Command="{Binding StartCommand}" Grid.Row="4" Grid.Column="0" Content="Start" />
-        <Button Command="{Binding StopCommand}" Grid.Row="4" Grid.Column="1" Content="Stop" />
-
+        <ListBox Grid.Column="0" ItemsSource="{Binding AllViewModels}" SelectedItem="{Binding CurrentViewModel}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
+        <ContentControl Grid.Column="2" Content="{Binding CurrentViewModel}" />
     </Grid>
 </Window>

@@ -36,16 +36,23 @@ namespace SiteAdminUtils.Core
             const string parsePattern = "dd/MMM/yyyy:HH:mm:ss zzz";
             return DateTimeOffset.ParseExact(apacheDate, parsePattern, CultureInfo.InvariantCulture);
         }
+
+        public override string ToString()
+        {
+            return $"{Ip}|{DateOffset}|{Request}|{Response}|{Referer}|{UserAgent}";
+        }
     }
 
     public class ApacheLogAnalyser
     {
-        const string LogEntryPattern = "^([\\d.]+|::1) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(.+?)\" (\\d{3}) (\\d+) \"([^\"]+)\" \"([^\"]+)\"";
+        const string LogEntryPattern = "^([\\d.]+|::1) (\\S+) (\\S+) \\[([\\w:/]+\\s[+\\-]\\d{4})\\] \"(.+?)\" (\\d{3}) (\\d+) \"([^\"]*)\" \"([^\"]*)\"";
         static readonly Regex _logEntryRegex = new Regex(LogEntryPattern, RegexOptions.Compiled);
 
-        ConcurrentBag<ApacheLogEntry> _parsedLogEntries;
+        ConcurrentBag<ApacheLogEntry> _parsedLogEntries = new ConcurrentBag<ApacheLogEntry>();
 
-        IEnumerable<ApacheLogEntry> ParsedLogEntries => _parsedLogEntries;
+        public IEnumerable<ApacheLogEntry> ParsedLogEntries => _parsedLogEntries;
+
+        public int ItemsCount => _parsedLogEntries.Count;
 
 
         public static ApacheLogEntry GetLogEntryFromString(string logEntryLine)
@@ -66,17 +73,26 @@ namespace SiteAdminUtils.Core
 
         internal void ProcessLine(string logEntryLine)
         {
-            _parsedLogEntries.Add(GetLogEntryFromString(logEntryLine));
+            try
+            {
+                _parsedLogEntries.Add(GetLogEntryFromString(logEntryLine));
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.Print($"Error with <{logEntryLine}> : {ex.Message}");
+            }
         }
 
-
+        public void Reset()
+        {
+            _parsedLogEntries = new ConcurrentBag<ApacheLogEntry>();
+        }
 
         public void ProcessFile(string filePath, int? limitLinesNumber = null)
         {
             var allLines = File.ReadAllLines(filePath);
             int linesToProcess = Math.Min(limitLinesNumber ?? allLines.Length, allLines.Length);
 
-            _parsedLogEntries = new ConcurrentBag<ApacheLogEntry>();
 
             Parallel.For(0, linesToProcess, i => ProcessLine(allLines[i]));
         }
