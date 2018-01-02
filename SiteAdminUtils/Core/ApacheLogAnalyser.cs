@@ -18,9 +18,10 @@ namespace SiteAdminUtils.Core
         public int Response;
         public int BytesSent;
         public string Referer;
-        public String UserAgent;
+        public string UserAgent;
+        public string FilePath;
 
-        public ApacheLogEntry(string ip, string date, string request, int response, int bytesSent, string referer, string userAgent)
+        public ApacheLogEntry(string ip, string date, string request, int response, int bytesSent, string referer, string userAgent, string filePath = null)
         {
             Ip = ip;
             DateOffset = GetDateTimeOffsetFromApacheDate(date);
@@ -29,6 +30,7 @@ namespace SiteAdminUtils.Core
             BytesSent = bytesSent;
             Referer = referer;
             UserAgent = userAgent;
+            FilePath = filePath;
         }
 
         public static DateTimeOffset GetDateTimeOffsetFromApacheDate(string apacheDate)
@@ -55,7 +57,7 @@ namespace SiteAdminUtils.Core
         public int ItemsCount => _parsedLogEntries.Count;
 
 
-        public static ApacheLogEntry GetLogEntryFromString(string logEntryLine)
+        public static ApacheLogEntry GetLogEntryFromString(string logEntryLine, string filePath = null)
         {
             var match = _logEntryRegex.Match(logEntryLine);
 
@@ -67,15 +69,16 @@ namespace SiteAdminUtils.Core
                 , Convert.ToInt32(match.Groups[7].Value)
                 , match.Groups[8].Value
                 , match.Groups[9].Value
+                , filePath
                 );
         }
 
 
-        internal void ProcessLine(string logEntryLine)
+        internal void ProcessLine(string logEntryLine, string filePath = null)
         {
             try
             {
-                _parsedLogEntries.Add(GetLogEntryFromString(logEntryLine));
+                _parsedLogEntries.Add(GetLogEntryFromString(logEntryLine, filePath));
             }
             catch (Exception ex)
             {
@@ -88,13 +91,17 @@ namespace SiteAdminUtils.Core
             _parsedLogEntries = new ConcurrentBag<ApacheLogEntry>();
         }
 
-        public void ProcessFile(string filePath, int? limitLinesNumber = null)
+
+        public Task ProcessFileAsync(string filePath, int? limitLinesNumber = null)
         {
-            var allLines = File.ReadAllLines(filePath);
-            int linesToProcess = Math.Min(limitLinesNumber ?? allLines.Length, allLines.Length);
+            return Task.Run(() =>
+            {
+                var allLines = File.ReadAllLines(filePath);
+                int linesToProcess = Math.Min(limitLinesNumber ?? allLines.Length, allLines.Length);
 
 
-            Parallel.For(0, linesToProcess, i => ProcessLine(allLines[i]));
+                Parallel.For(0, linesToProcess, i => ProcessLine(allLines[i], filePath));
+            });
         }
 
     }

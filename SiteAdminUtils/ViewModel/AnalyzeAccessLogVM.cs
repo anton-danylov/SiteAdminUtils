@@ -3,11 +3,14 @@ using GalaSoft.MvvmLight.Command;
 using GalaSoft.MvvmLight.Messaging;
 using SiteAdminUtils.Core;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace SiteAdminUtils.ViewModel
 {
@@ -49,7 +52,7 @@ namespace SiteAdminUtils.ViewModel
         public int BytesSent { get; set; }
         public string Referer { get; set; }
         public string UserAgent { get; set; }
-        public string FromLog { get; set; }
+        public string FilePath { get; set; }
     }
 
     public class AnalyzeAccessLogVM : ViewModelBase
@@ -65,11 +68,21 @@ namespace SiteAdminUtils.ViewModel
 
         public RelayCommand DownloadLogsCommand { get; private set; }
         public RelayCommand ProcessSelectedLogsCommand { get; private set; }
+        public RelayCommand LoadItemsToDataGridCommand { get; private set; }
+
+        
 
         public ObservableCollection<LogItemVM> DownloadedLogItems { get; private set; } = new ObservableCollection<LogItemVM>();
 
         public ObservableCollection<ApacheLogItem> ProcessedLogEntries { get; private set; } = new ObservableCollection<ApacheLogItem>();
 
+
+        private string _aroundTime;
+        public string AroundTime
+        {
+            get { return _aroundTime; }
+            set { Set(ref _aroundTime, value); }
+        }
 
         private int _processedLinesCount;
         public int ProcessedLinesCount
@@ -105,10 +118,32 @@ namespace SiteAdminUtils.ViewModel
             }
         }
 
+        private bool _isDownloading;
+        public bool IsDownloading
+        {
+            get { return _isDownloading; }
+            private set
+            {
+                _isDownloading = value;
+                DownloadLogsCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private bool _isProcessing;
+        public bool IsProcessing
+        {
+            get { return _isProcessing; }
+            private set
+            {
+                _isProcessing = value;
+                ProcessSelectedLogsCommand.RaiseCanExecuteChanged();
+            }
+        }
 
         public string TempFolderPath => Path.Combine(Path.GetTempPath(), TempFolder);
         public string LogsFolderPath => Path.Combine(TempFolderPath, LogsFolder);
 
+        
 
         public AnalyzeAccessLogVM()
         {
@@ -117,37 +152,68 @@ namespace SiteAdminUtils.ViewModel
                 RaisePropertyChanged(nameof(IsSelectedAllLogs));
             });
 
-            DownloadLogsCommand = new RelayCommand(DownloadLogsFromServer, () => true);
-            ProcessSelectedLogsCommand = new RelayCommand(ProcessSelectedLogs, () => true);
+            DownloadLogsCommand = new RelayCommand(DownloadLogsFromServer, () => !IsDownloading);
+            ProcessSelectedLogsCommand = new RelayCommand(ProcessSelectedLogs, () => !IsProcessing);
+            LoadItemsToDataGridCommand = new RelayCommand(LoadItemsToDataGrid, () => true);
 
             AutoMapper.Mapper.Initialize(c => c.CreateMap<Core.ApacheLogEntry, ApacheLogItem>());
-        
+
+            AroundTime = "07/03/2017 13:05:01 -05:00";
+
             FillDownloadedLogItems();
         }
 
-        private void ProcessSelectedLogs()
+        private void LoadItemsToDataGrid()
         {
+            IEnumerable<ApacheLogEntry> selectedEntries = _logAnalyser.ParsedLogEntries;
+
+            if (!String.IsNullOrEmpty(AroundTime))
+            {
+                string format = "dd/MM/yyyy HH:mm:ss zzz";
+
+                DateTimeOffset aroundTime = DateTimeOffset.ParseExact(AroundTime, format, CultureInfo.InvariantCulture);
+
+                selectedEntries = _logAnalyser.ParsedLogEntries
+                    .Where(le => (le.DateOffset - aroundTime).Duration().TotalMinutes < 10);
+            }
+            else
+            {
+                selectedEntries = _logAnalyser.ParsedLogEntries.Where(le => le.Response == 500);
+                //selectedEntries = _logAnalyser.ParsedLogEntries.GroupBy(le => le.Ip);
+                selectedEntries = _logAnalyser.ParsedLogEntries.Where(le => le.Request.Contains(".pdf"));
+
+
+
+            }
+
+            foreach (var entry in selectedEntries)
+            {
+                var vm = AutoMapper.Mapper.Map<ApacheLogItem>(entry);
+
+                //vm.DateOffset = vm.DateOffset.ToLocalTime();
+
+                ProcessedLogEntries.Add(vm);
+            }
+        }
+
+        private async void ProcessSelectedLogs()
+        {
+            IsProcessing = true;
+
             _logAnalyser.Reset();
 
             var selectedFiles = DownloadedLogItems.Where(vm => vm.IsSelected).Select(vm => vm.FullPath);
 
-            foreach (var file in selectedFiles)
-            {
-                _logAnalyser.ProcessFile(file);
-            }
+
+            await Task.WhenAll(selectedFiles.Select(file => _logAnalyser.ProcessFileAsync(file)));
+
+            
 
             ProcessedLinesCount = _logAnalyser.ItemsCount;
             LogTimeStart = _logAnalyser.ParsedLogEntries.Min(le => le.DateOffset).ToLocalTime().DateTime;
             LogTimeEnd = _logAnalyser.ParsedLogEntries.Max(le => le.DateOffset).ToLocalTime().DateTime;
 
-
-
-            //var errors =_logAnalyser.ParsedLogEntries.Where(le => le.Response == 500).ToList();
-
-            //foreach (var entry in _logAnalyser.ParsedLogEntries)
-            //{
-            //    ProcessedLogEntries.Add(AutoMapper.Mapper.Map<ApacheLogItem>(entry));
-            //}
+            IsProcessing = false;
         }
 
         public void ClearTempFolder(string folderPath)
@@ -165,15 +231,19 @@ namespace SiteAdminUtils.ViewModel
         {
             DownloadedLogItems.Clear();
 
-
-            Directory.EnumerateFiles(LogsFolderPath)
-            .Select(p => new LogItemVM() { FullPath = p, Name = Path.GetFileName(p), IsSelected = true })
-            .ToList()
-            .ForEach(vm => DownloadedLogItems.Add(vm));
+            if (Directory.Exists(LogsFolderPath))
+            {
+                Directory.EnumerateFiles(LogsFolderPath)
+                .Select(p => new LogItemVM() { FullPath = p, Name = Path.GetFileName(p), IsSelected = true })
+                .ToList()
+                .ForEach(vm => DownloadedLogItems.Add(vm));
+            }
         }
 
-        public void DownloadLogsFromServer()
+        public async void DownloadLogsFromServer()
         {
+            IsDownloading = true;
+
             var url = ConfigurationManager.AppSettings["ArchivedLogsUrl"];
             var uri = new Uri(url);
 
@@ -191,7 +261,7 @@ namespace SiteAdminUtils.ViewModel
             using (WebClient client = new WebClient())
             {
                 client.DownloadProgressChanged += (s, e) => { /*e.ProgressPercentage;*/ };
-                client.DownloadFile(uri, archivePath);
+                await client.DownloadFileTaskAsync(uri, archivePath);
             }
 
             if (!Directory.Exists(LogsFolderPath))
@@ -206,6 +276,8 @@ namespace SiteAdminUtils.ViewModel
             System.IO.Compression.ZipFile.ExtractToDirectory(archivePath, LogsFolderPath);
 
             FillDownloadedLogItems();
+
+            IsDownloading = false;
         }
 
     }

@@ -24,5 +24,12 @@ namespace SiteAdminUtils.View
         {
             InitializeComponent();
         }
+
+        private void DataGrid_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        {
+            if (e.PropertyType == typeof(System.DateTimeOffset))
+                (e.Column as DataGridTextColumn).Binding.StringFormat = "dd/MM/yyyy HH:mm:ss zzz";
+
+        }
     }
 }

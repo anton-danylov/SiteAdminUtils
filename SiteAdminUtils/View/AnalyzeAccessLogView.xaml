@@ -14,7 +14,7 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="25px" />
-            <RowDefinition />
+            <RowDefinition Height="50px" />
             <RowDefinition />
         </Grid.RowDefinitions>
 
@@ -29,13 +29,28 @@
             <TextBlock Text="{Binding LogTimeEnd}" />
         </StackPanel>
 
+        <Grid Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="1" Margin="3">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Button Grid.RowSpan="2" Command="{Binding LoadItemsToDataGridCommand}" Content="Load Data" Margin="5"/>
+            <TextBox Text="{Binding AroundTime}" Grid.Column="1" />
+        </Grid>
+
         <!-- ListView with processing results-->
-        <DataGrid Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding ProcessedLogEntries}">
+        <DataGrid Grid.Column="1" Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding ProcessedLogEntries}" AutoGeneratingColumn="DataGrid_AutoGeneratingColumn">
 
         </DataGrid>
 
         <!-- Listbox with logs-->
-        <Grid Grid.Row="1" Grid.Column="0">
+        <Grid Grid.Row="1" Grid.Column="0" Grid.RowSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
